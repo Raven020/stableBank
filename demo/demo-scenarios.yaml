@@ -1,0 +1,100 @@
+# demo/demo-scenarios.yaml — scripted, stage-safe demo scenarios (D8).
+#
+# Loaded by internal/demo at startup. Every edit_rule step goes through the
+# real rules engine (internal/rules): validated, examples re-run, versioned,
+# hot-reloaded. reset_scenario reactivates the pre-demo version of every
+# rule touched so the whole script is safe to re-run.
+scenarios:
+  - scenario_id: live-demo-v1
+    description: >
+      Seven-step live demo: show a loan decision, tighten underwriting with
+      a one-field YAML edit and re-run it, flip the spend-waterfall funding
+      order and re-run a purchase, lower a dashboard threshold, then reset
+      every touched rule back to its pre-demo version.
+    steps:
+      - id: step-1-baseline
+        label: Baseline underwrite
+        action: call_api
+        method: POST
+        path: /loan/underwrite
+        request: { applicant_id: demo-applicant-1 }
+        narration: "Applicant currently qualifies under today's rules."
+
+      - id: step-2-tighten-credit-score
+        label: Tighten the credit score minimum
+        action: edit_rule
+        rule_id: loan_underwriting
+        field_path: eligibility.min_credit_score
+        new_value: 700
+        allow_failing_examples: true
+        narration: "Editing one YAML field — no code change, no restart."
+
+      - id: step-3-rerun-same-applicant
+        label: Re-run the same applicant
+        action: call_api
+        method: POST
+        path: /loan/underwrite
+        request: { applicant_id: demo-applicant-1 }
+        narration: "Same applicant, same code — now declined."
+
+      - id: step-4-flip-waterfall
+        label: Flip the spend waterfall
+        action: edit_rule
+        rule_id: spend_waterfall
+        field_path: conditions_evaluated_in_order[0].rule
+        new_value: prefer_stablecoin_if_sufficient
+        allow_failing_examples: true
+        narration: "Same purchase will now fund from USDC first."
+
+      - id: step-5-rerun-purchase
+        label: Re-run the purchase
+        action: call_api
+        method: POST
+        path: /simulate/purchase
+        request: { account_id: demo-account-1, amount_cents: 5000 }
+        narration: "Funded-by receipt flips currency with zero code change."
+
+      - id: step-6-lower-lcr-target
+        label: Lower the LCR target
+        action: edit_rule
+        rule_id: dashboard_thresholds
+        field_path: targets.lcr_minimum_pct
+        new_value: 90
+        # Deviation from the literal build prompt (documented in the D8
+        # report): dashboard_thresholds.yaml's own second worked example
+        # uses lcr_pct: 90 to demonstrate a below-target breach against the
+        # old 100% minimum. Lowering the minimum to 90 legitimately flips
+        # that example's expected status from "below_target" to "ok", for
+        # exactly the same reason steps 2 and 4 need the flag. Without it,
+        # this step would 409 examples_failed and break the scripted demo.
+        allow_failing_examples: true
+        narration: >-
+          Watch the dashboard's below-target indicator turn green — same
+          underlying number, governed threshold.
+
+      - id: step-7-reset
+        label: Reset the demo
+        action: reset_scenario
+        narration: >-
+          Restores every rule touched in this script to its pre-demo
+          version — safe to re-run the whole demo.
+
+  - scenario_id: portfolio-over-time
+    description: >
+      Advance simulated time by a month and show the dashboard ratios move,
+      to demonstrate the portfolio evolving without any manual data entry.
+    steps:
+      - id: step-1-advance-time
+        label: Advance simulated time
+        action: call_api
+        method: POST
+        path: /simulate/advance-time
+        request: { days: 31 }
+        narration: "Fast-forwarding the simulated clock by a month."
+
+      - id: step-2-check-ratios
+        label: Check dashboard ratios
+        action: call_api
+        method: GET
+        path: /dashboard/ratios
+        narration: "The dashboard's ratios now reflect a month of activity."
