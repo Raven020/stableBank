@@ -15,6 +15,7 @@ import (
 
 	"github.com/Raven020/stableBank/internal/account"
 	"github.com/Raven020/stableBank/internal/dashboard"
+	"github.com/Raven020/stableBank/internal/demo"
 	"github.com/Raven020/stableBank/internal/httpx"
 	"github.com/Raven020/stableBank/internal/ledger"
 	"github.com/Raven020/stableBank/internal/loan"
@@ -37,6 +38,7 @@ func main() {
 	ctx := context.Background()
 	addr := getenv("ADDR", ":8080")
 	rulesDir := getenv("RULES_DIR", "rules")
+	demoPath := getenv("DEMO_SCENARIOS", "demo/demo-scenarios.yaml")
 
 	start, err := time.Parse(time.RFC3339, getenv("SIM_START", "2026-09-01T09:00:00Z"))
 	if err != nil {
@@ -111,6 +113,13 @@ func main() {
 	loans.RegisterRoutes(mux)
 	dash.RegisterRoutes(mux)
 	sim.RegisterRoutes(mux)
+	// Demo Mode fires call_api steps against this same mux in-process.
+	// PoC-only: /demo/*
+	show := demo.New(engine, mux, clock, demoPath)
+	if err := show.LoadError(); err != nil {
+		log.Fatalf("demo scenarios: %v", err)
+	}
+	show.RegisterRoutes(mux)
 	mux.Handle("/", web.Handler())
 
 	log.Printf("stablebank listening on %s (sim clock %s)", addr, clock.Now().Format(time.RFC3339))
