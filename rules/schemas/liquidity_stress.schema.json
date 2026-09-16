@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "liquidity_stress.schema.json",
+  "title": "liquidity_stress rule",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "rule_id", "rule_type", "version", "domain", "description", "rationale",
+    "owner", "last_reviewed", "examples",
+    "stress_window_days", "deposit_runoff_pct", "hqla_haircut_pct", "nsfr"
+  ],
+  "properties": {
+    "rule_id": { "type": "string" },
+    "rule_type": { "const": "liquidity_stress" },
+    "version": { "type": "integer" },
+    "domain": { "type": "string" },
+    "description": { "type": "string" },
+    "rationale": { "type": "string" },
+    "owner": { "type": "string" },
+    "last_reviewed": { "type": "string" },
+    "examples": { "type": "array" },
+
+    "stress_window_days": { "type": "integer", "minimum": 1 },
+    "deposit_runoff_pct": { "type": "number", "minimum": 0 },
+
+    "hqla_haircut_pct": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "type": "number", "minimum": 0 }
+    },
+
+    "nsfr": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["asf_factors_pct", "rsf_factors_pct"],
+      "properties": {
+        "asf_factors_pct": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": { "type": "number", "minimum": 0 }
+        },
+        "rsf_factors_pct": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": { "type": "number", "minimum": 0 }
+        }
+      }
+    }
+  }
+}

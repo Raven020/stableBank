@@ -1,0 +1,49 @@
+rule_id: depeg_policy
+rule_type: depeg_policy
+version: 1
+domain: ledger
+description: >
+  Thresholds that classify the USDC/USD price into normal, watch or depeg
+  status, and the actions that would be taken on a depeg.
+rationale: >
+  Documents treasury's depeg response plan (and the price bands that
+  trigger it) as data so it is reviewable and versioned, even though this
+  proof-of-concept does not wire it up to a live price feed or an
+  automated enforcement action yet.
+owner: treasury@stablebank.demo
+last_reviewed: "2026-08-01"
+
+enforced: false
+reference_currency: USD
+
+thresholds:
+  watch_below_usd: "0.99500000"
+  depeg_below_usd: "0.97000000"
+
+actions_on_depeg:
+  - halt_usdc_funding_in_waterfall
+  - halt_fx_conversions
+  - notify_treasury
+
+# status:
+#   "normal" if usdc_price_usd >= watch_below_usd
+#   "watch"  if depeg_below_usd <= usdc_price_usd < watch_below_usd
+#   "depeg"  if usdc_price_usd < depeg_below_usd
+limitation: >
+  This policy is documented for future use but is not actively monitored
+  or enforced by any automated process in this proof-of-concept:
+  enforced is false, there is no live price feed wired in, and
+  actions_on_depeg are not triggered automatically.
+
+examples:
+  - name: price at peg is normal
+    input: { usdc_price_usd: "0.9990" }
+    expected: { status: normal }
+
+  - name: price below watch threshold but above depeg threshold is watch
+    input: { usdc_price_usd: "0.9800" }
+    expected: { status: watch }
+
+  - name: price below depeg threshold is depeg
+    input: { usdc_price_usd: "0.9500" }
+    expected: { status: depeg }

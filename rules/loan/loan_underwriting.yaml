@@ -1,0 +1,82 @@
+rule_id: loan_underwriting
+rule_type: loan_underwriting
+version: 1
+domain: loan
+description: >
+  Eligibility gates and risk-based pricing tiers applied when a customer
+  applies for a personal loan.
+rationale: >
+  Encodes the bank's credit policy as data so credit-risk can tighten or
+  loosen thresholds (minimum credit score, DTI ceiling, pricing tiers)
+  without a code deploy, while every change is versioned and auditable.
+owner: credit-risk@stablebank.demo
+last_reviewed: "2026-08-01"
+
+eligibility:
+  min_credit_score: 620
+  min_monthly_income_cents: 250000       # $2,500.00/month
+  max_debt_to_income_pct: 45             # (existing_debt_monthly_cents + proposed_installment_cents) / monthly_income_cents * 100
+  min_account_age_days: 90
+  min_risk_score: 40
+
+# Matched by risk_score, descending; first matching tier wins.
+pricing_tiers:
+  - { tier: A, min_risk_score: 80, annual_rate_bps: 699,  max_principal_cents: 5000000 }
+  - { tier: B, min_risk_score: 60, annual_rate_bps: 999,  max_principal_cents: 3000000 }
+  - { tier: C, min_risk_score: 40, annual_rate_bps: 1499, max_principal_cents: 1500000 }
+
+allowed_term_months: [12, 24, 36, 48, 60]
+
+# Reasons vocabulary emitted by the evaluator, checked in this order:
+#   credit_score_below_minimum, income_below_minimum,
+#   debt_to_income_above_maximum, account_age_below_minimum,
+#   risk_score_below_minimum, term_not_allowed,
+#   principal_above_tier_maximum
+examples:
+  - name: demo-applicant-1 approved at min_credit_score 620 (tier B)
+    # credit_score 650 -> risk_scoring band [580,669] = 0 pts
+    # income 650000    -> risk_scoring band [500000,999999] = +10 pts
+    # account_age 400  -> risk_scoring band [365,729] = +5 pts
+    # balance 150000   -> risk_scoring band [100000,499999] = +5 pts
+    # risk_score = clamp(50 + 0+10+5+5) = 70 -> tier B (>=60, <80), pd_bps 400
+    # DTI = (80000 + 32000) / 650000 = 112000/650000 = 17.23% <= 45% OK
+    # requested principal 1,000,000 <= tier B max 3,000,000 OK
+    # term 36 in allowed_term_months OK
+    input:
+      credit_score: 650
+      monthly_income_cents: 650000
+      existing_debt_monthly_cents: 80000
+      account_age_days: 400
+      risk_score: 70
+      requested_principal_cents: 1000000
+      term_months: 36
+      proposed_installment_cents: 32000
+    expected:
+      approved: true
+      tier: "B"
+      annual_rate_bps: 999
+      reasons: []
+
+  - name: decline for multiple violated eligibility gates
+    # credit_score 590 < 620                                  -> credit_score_below_minimum
+    # monthly_income_cents 180000 < 250000                     -> income_below_minimum
+    # DTI = (120000 + 90000) / 180000 = 210000/180000 = 116.67% > 45% -> debt_to_income_above_maximum
+    # account_age_days 60 < 90                                 -> account_age_below_minimum
+    # risk_score 30 < 40                                       -> risk_score_below_minimum
+    input:
+      credit_score: 590
+      monthly_income_cents: 180000
+      existing_debt_monthly_cents: 120000
+      account_age_days: 60
+      risk_score: 30
+      requested_principal_cents: 2000000
+      term_months: 36
+      proposed_installment_cents: 90000
+    expected:
+      approved: false
+      reasons:
+        - credit_score_below_minimum
+        - income_below_minimum
+        - debt_to_income_above_maximum
+        - account_age_below_minimum
+        - risk_score_below_minimum

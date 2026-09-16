@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "risk_weights.schema.json",
+  "title": "risk_weights rule",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "rule_id", "rule_type", "version", "domain", "description", "rationale",
+    "owner", "last_reviewed", "examples",
+    "weights_by_tier_pct", "defaulted_weight_pct", "default_weight_pct"
+  ],
+  "properties": {
+    "rule_id": { "type": "string" },
+    "rule_type": { "const": "risk_weights" },
+    "version": { "type": "integer" },
+    "domain": { "type": "string" },
+    "description": { "type": "string" },
+    "rationale": { "type": "string" },
+    "owner": { "type": "string" },
+    "last_reviewed": { "type": "string" },
+    "examples": { "type": "array" },
+
+    "weights_by_tier_pct": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "type": "number", "minimum": 0 }
+    },
+    "defaulted_weight_pct": { "type": "number", "minimum": 0 },
+    "default_weight_pct": { "type": "number", "minimum": 0 }
+  }
+}

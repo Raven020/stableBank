@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dashboard_thresholds.schema.json",
+  "title": "dashboard_thresholds rule",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "rule_id", "rule_type", "version", "domain", "description", "rationale",
+    "owner", "last_reviewed", "examples",
+    "targets"
+  ],
+  "properties": {
+    "rule_id": { "type": "string" },
+    "rule_type": { "const": "dashboard_thresholds" },
+    "version": { "type": "integer" },
+    "domain": { "type": "string" },
+    "description": { "type": "string" },
+    "rationale": { "type": "string" },
+    "owner": { "type": "string" },
+    "last_reviewed": { "type": "string" },
+    "examples": { "type": "array" },
+
+    "targets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "lcr_minimum_pct",
+        "nsfr_minimum_pct",
+        "capital_adequacy_minimum_pct",
+        "loan_to_deposit_maximum_pct"
+      ],
+      "properties": {
+        "lcr_minimum_pct": { "type": "number" },
+        "nsfr_minimum_pct": { "type": "number" },
+        "capital_adequacy_minimum_pct": { "type": "number" },
+        "loan_to_deposit_maximum_pct": { "type": "number" }
+      }
+    }
+  }
+}

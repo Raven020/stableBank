@@ -1,0 +1,56 @@
+rule_id: spend_waterfall
+rule_type: spend_waterfall
+version: 1
+domain: account
+description: >
+  Order in which a purchase draws down a customer's USD and USDC balances,
+  including whether a purchase may be split across both currencies.
+rationale: >
+  Payments needs to change funding preference (e.g. prefer fiat first) and
+  toggle split-funding without a deploy, while every purchase decision
+  stays auditable against the exact policy version that approved it.
+owner: payments@stablebank.demo
+last_reviewed: "2026-08-01"
+
+conditions_evaluated_in_order:
+  - { rule: prefer_fiat_if_sufficient }
+  - { rule: prefer_stablecoin_if_sufficient }
+  - { rule: split_fiat_then_stablecoin }
+  - { rule: decline }
+
+allow_split: true
+
+examples:
+  - name: fiat balance alone is sufficient
+    input: { amount_cents: 5000, usd_balance_cents: 10000, usdc_balance_usd_equivalent_cents: 0 }
+    expected:
+      decision: approved
+      matched_rule: prefer_fiat_if_sufficient
+      funding:
+        - { currency: USD, usd_equivalent_cents: 5000, share_pct: 100 }
+
+  - name: fiat insufficient but stablecoin balance alone is sufficient
+    input: { amount_cents: 5000, usd_balance_cents: 1000, usdc_balance_usd_equivalent_cents: 8000 }
+    expected:
+      decision: approved
+      matched_rule: prefer_stablecoin_if_sufficient
+      funding:
+        - { currency: USDC, usd_equivalent_cents: 5000, share_pct: 100 }
+
+  - name: neither balance alone is sufficient but combined they are - split
+    # USD portion = min(usd_balance, amount) = 2000; remainder 3000 from USDC
+    # share_pct: 2000/5000=40%, 3000/5000=60%
+    input: { amount_cents: 5000, usd_balance_cents: 2000, usdc_balance_usd_equivalent_cents: 4000 }
+    expected:
+      decision: approved
+      matched_rule: split_fiat_then_stablecoin
+      funding:
+        - { currency: USD, usd_equivalent_cents: 2000, share_pct: 40 }
+        - { currency: USDC, usd_equivalent_cents: 3000, share_pct: 60 }
+
+  - name: combined balances are insufficient - decline
+    input: { amount_cents: 5000, usd_balance_cents: 1000, usdc_balance_usd_equivalent_cents: 1000 }
+    expected:
+      decision: declined
+      matched_rule: decline
+      funding: []

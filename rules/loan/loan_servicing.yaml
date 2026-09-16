@@ -1,0 +1,37 @@
+rule_id: loan_servicing
+rule_type: loan_servicing
+version: 1
+domain: loan
+description: >
+  Grace period, late fee and default-trigger policy applied when an
+  installment is missed.
+rationale: >
+  Collections needs to tune the grace period and the number of missed
+  payments that trigger a default without a code change, and every tick
+  of the simulated clock must apply the exact same, auditable policy.
+owner: collections@stablebank.demo
+last_reviewed: "2026-08-01"
+
+grace_period_days: 5
+missed_payments_to_default: 3
+late_fee_cents: 2500
+
+# is_missed        = days_past_due > grace_period_days
+# late_fee_cents   = is_missed ? late_fee_cents (config) : 0
+# should_default   = is_missed && (missed_payments_so_far + 1) >= missed_payments_to_default
+#   (missed_payments_so_far counts prior misses; +1 accounts for this one)
+examples:
+  - name: within grace period, no fee
+    # 5 is not > 5 -> not missed
+    input: { days_past_due: 5, missed_payments_so_far: 0 }
+    expected: { is_missed: false, late_fee_cents: 0, should_default: false }
+
+  - name: missed but under the default threshold
+    # 10 > 5 -> missed, fee charged; (1+1)=2 < 3 -> no default
+    input: { days_past_due: 10, missed_payments_so_far: 1 }
+    expected: { is_missed: true, late_fee_cents: 2500, should_default: false }
+
+  - name: missed and reaches the default threshold
+    # 15 > 5 -> missed, fee charged; (2+1)=3 >= 3 -> default
+    input: { days_past_due: 15, missed_payments_so_far: 2 }
+    expected: { is_missed: true, late_fee_cents: 2500, should_default: true }

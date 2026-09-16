@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "loan_servicing.schema.json",
+  "title": "loan_servicing rule",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "rule_id", "rule_type", "version", "domain", "description", "rationale",
+    "owner", "last_reviewed", "examples",
+    "grace_period_days", "missed_payments_to_default", "late_fee_cents"
+  ],
+  "properties": {
+    "rule_id": { "type": "string" },
+    "rule_type": { "const": "loan_servicing" },
+    "version": { "type": "integer" },
+    "domain": { "type": "string" },
+    "description": { "type": "string" },
+    "rationale": { "type": "string" },
+    "owner": { "type": "string" },
+    "last_reviewed": { "type": "string" },
+    "examples": { "type": "array" },
+
+    "grace_period_days": { "type": "integer", "minimum": 0 },
+    "missed_payments_to_default": { "type": "integer", "minimum": 1 },
+    "late_fee_cents": { "type": "integer", "minimum": 0 }
+  }
+}

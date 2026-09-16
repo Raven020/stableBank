@@ -1,0 +1,34 @@
+rule_id: risk_weights
+rule_type: risk_weights
+version: 1
+domain: dashboard
+description: >
+  Risk weights applied to each loan's exposure-at-default (EAD) when
+  computing risk-weighted assets (RWA) for the capital adequacy ratio.
+rationale: >
+  Finance wants to be able to adjust the illustrative risk weight per
+  tier (and the weight applied to defaulted exposures) without a deploy,
+  since these directly drive the RWA shown on the dashboard.
+owner: finance@stablebank.demo
+last_reviewed: "2026-08-01"
+
+weights_by_tier_pct: { A: 50, B: 75, C: 100, D: 150 }
+defaulted_weight_pct: 150
+default_weight_pct: 100
+
+# weight = defaulted_weight_pct if status == "defaulted"
+#          else weights_by_tier_pct[tier] if tier is known
+#          else default_weight_pct (fallback for an unrecognised tier)
+# rwa_cents = ead_cents * weight_pct / 100
+examples:
+  - name: active tier B loan
+    input: { tier: B, status: active, ead_cents: 100000 }
+    expected: { risk_weight_pct: 75, rwa_cents: 75000 }
+
+  - name: active tier A loan
+    input: { tier: A, status: active, ead_cents: 200000 }
+    expected: { risk_weight_pct: 50, rwa_cents: 100000 }
+
+  - name: defaulted loan uses the defaulted weight regardless of tier
+    input: { tier: C, status: defaulted, ead_cents: 50000 }
+    expected: { risk_weight_pct: 150, rwa_cents: 75000 }

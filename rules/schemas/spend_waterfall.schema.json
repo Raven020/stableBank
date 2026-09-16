@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "spend_waterfall.schema.json",
+  "title": "spend_waterfall rule",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "rule_id", "rule_type", "version", "domain", "description", "rationale",
+    "owner", "last_reviewed", "examples",
+    "conditions_evaluated_in_order", "allow_split"
+  ],
+  "properties": {
+    "rule_id": { "type": "string" },
+    "rule_type": { "const": "spend_waterfall" },
+    "version": { "type": "integer" },
+    "domain": { "type": "string" },
+    "description": { "type": "string" },
+    "rationale": { "type": "string" },
+    "owner": { "type": "string" },
+    "last_reviewed": { "type": "string" },
+    "examples": { "type": "array" },
+
+    "conditions_evaluated_in_order": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["rule"],
+        "properties": {
+          "rule": {
+            "type": "string",
+            "enum": [
+              "prefer_fiat_if_sufficient",
+              "prefer_stablecoin_if_sufficient",
+              "split_fiat_then_stablecoin",
+              "split_stablecoin_then_fiat",
+              "decline"
+            ]
+          }
+        }
+      }
+    },
+
+    "allow_split": { "type": "boolean" }
+  }
+}

@@ -1,0 +1,35 @@
+rule_id: liquidity_stress
+rule_type: liquidity_stress
+version: 1
+domain: dashboard
+description: >
+  Deposit run-off assumption and HQLA haircuts used for the dashboard's
+  illustrative liquidity coverage ratio (LCR) stress scenario, plus the
+  NSFR-style ASF/RSF factors used elsewhere on the dashboard.
+rationale: >
+  Treasury wants to flex the stress-window run-off assumption and the
+  USDC haircut on high-quality liquid assets to see how sensitive the
+  illustrative LCR is, without a code change.
+owner: treasury@stablebank.demo
+last_reviewed: "2026-08-01"
+
+stress_window_days: 30
+deposit_runoff_pct: 10
+hqla_haircut_pct: { USD: 0, USDC: 15 }
+
+nsfr:
+  asf_factors_pct: { customer_deposit: 90, equity_capital: 100 }
+  rsf_factors_pct: { loan_receivable: 85, treasury_cash: 5, treasury_fx: 50 }
+
+# net_outflows_cents = deposits_cents * deposit_runoff_pct / 100
+# lcr_pct = hqla_cents / net_outflows_cents * 100
+examples:
+  - name: comfortable coverage
+    # net_outflows = 5,000,000 * 10% = 500,000; lcr = 750,000/500,000*100 = 150.0
+    input: { hqla_cents: 750000, deposits_cents: 5000000 }
+    expected: { net_outflows_cents: 500000, lcr_pct: 150.0 }
+
+  - name: under-covered
+    # net_outflows = 8,000,000 * 10% = 800,000; lcr = 400,000/800,000*100 = 50.0
+    input: { hqla_cents: 400000, deposits_cents: 8000000 }
+    expected: { net_outflows_cents: 800000, lcr_pct: 50.0 }

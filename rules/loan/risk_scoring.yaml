@@ -1,0 +1,119 @@
+rule_id: risk_scoring
+rule_type: risk_scoring
+version: 1
+domain: loan
+description: >
+  Computes a 0-100 risk score for a loan applicant from credit score,
+  income, account tenure and existing balance, then maps that score to a
+  risk tier and a probability-of-default (PD) in basis points.
+rationale: >
+  A single, transparent scorecard lets credit-risk recalibrate band
+  cutoffs and tier PDs as delinquency data comes in, without redeploying
+  the loan service, and gives every underwriting decision a reproducible,
+  auditable score.
+owner: credit-risk@stablebank.demo
+last_reviewed: "2026-08-01"
+
+base_score: 50
+
+# score = clamp(base_score + sum(points for each factor's matching band))
+# Each band matches when min <= value (if min present) and value <= max
+# (if max present); bands within a factor must be mutually exclusive.
+factors:
+  - name: credit_score
+    input: credit_score
+    bands:
+      - { max: 579, points: -25 }
+      - { min: 580, max: 669, points: 0 }
+      - { min: 670, max: 739, points: 15 }
+      - { min: 740, points: 30 }
+
+  - name: income
+    input: monthly_income_cents
+    bands:
+      - { max: 199999, points: -10 }
+      - { min: 200000, max: 499999, points: 0 }
+      - { min: 500000, max: 999999, points: 10 }
+      - { min: 1000000, points: 20 }
+
+  - name: account_age
+    input: account_age_days
+    bands:
+      - { max: 89, points: -10 }
+      - { min: 90, max: 364, points: 0 }
+      - { min: 365, max: 729, points: 5 }
+      - { min: 730, points: 10 }
+
+  - name: existing_balance
+    input: existing_balance_cents
+    bands:
+      - { max: 9999, points: -5 }
+      - { min: 10000, max: 99999, points: 0 }
+      - { min: 100000, max: 499999, points: 5 }
+      - { min: 500000, points: 10 }
+
+clamp: { min: 0, max: 100 }
+
+# Matched by final score, descending; first matching tier wins.
+tiers:
+  - { tier: A, min_score: 80, pd_bps: 150 }
+  - { tier: B, min_score: 60, pd_bps: 400 }
+  - { tier: C, min_score: 40, pd_bps: 900 }
+  - { tier: D, min_score: 0,  pd_bps: 2000 }
+
+lgd_bps: 4500
+
+examples:
+  - name: demo-applicant-1 profile -> tier B
+    # credit 650 -> [580,669] = 0
+    # income 650000 -> [500000,999999] = +10
+    # age 400 -> [365,729] = +5
+    # balance 150000 -> [100000,499999] = +5
+    # score = 50 + 0+10+5+5 = 70 -> clamp(0,100) = 70 -> tier B (>=60,<80), pd_bps 400
+    input:
+      credit_score: 650
+      monthly_income_cents: 650000
+      account_age_days: 400
+      existing_balance_cents: 150000
+    expected:
+      risk_score: 70
+      tier: "B"
+      pd_bps: 400
+      lgd_bps: 4500
+      factor_points: { credit_score: 0, income: 10, account_age: 5, existing_balance: 5 }
+
+  - name: demo-applicant-2 profile -> tier A, clamped at 100
+    # credit 760 -> [740,] = +30
+    # income 900000 -> [500000,999999] = +10
+    # age 900 -> [730,] = +10
+    # balance 500000 -> [500000,] = +10
+    # score = 50 + 30+10+10+10 = 110 -> clamp(0,100) = 100 -> tier A (>=80), pd_bps 150
+    input:
+      credit_score: 760
+      monthly_income_cents: 900000
+      account_age_days: 900
+      existing_balance_cents: 500000
+    expected:
+      risk_score: 100
+      tier: "A"
+      pd_bps: 150
+      lgd_bps: 4500
+      factor_points: { credit_score: 30, income: 10, account_age: 10, existing_balance: 10 }
+
+  - name: demo-applicant-3 profile -> tier C
+    # credit 590 -> [580,669] = 0
+    # income 300000 -> [200000,499999] = 0
+    # age 60 -> [,89] = -10
+    # balance 20000 -> [10000,99999] = 0
+    # score = 50 + 0+0-10+0 = 40 -> clamp(0,100) = 40 -> tier C (>=40,<60), pd_bps 900
+    input:
+      credit_score: 590
+      monthly_income_cents: 300000
+      account_age_days: 60
+      existing_balance_cents: 20000
+    expected:
+      risk_score: 40
+      tier: "C"
+      pd_bps: 900
+      lgd_bps: 4500
+      factor_points: { credit_score: 0, income: 0, account_age: -10, existing_balance: 0 }

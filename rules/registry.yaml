@@ -1,0 +1,61 @@
+# Registry of every business rule in the platform. The rules engine
+# (internal/rules) reads this file at startup, validates each referenced
+# rule file, and seeds version 1 into the RuleStore the first time it sees
+# a rule_id with no stored versions.
+#
+# `path` is repo-root relative, matching how the files are laid out under
+# rules/.
+rules:
+  - rule_id: loan_underwriting
+    rule_type: loan_underwriting
+    path: rules/loan/loan_underwriting.yaml
+    domain: loan
+    owner: credit-risk@stablebank.demo
+
+  - rule_id: risk_scoring
+    rule_type: risk_scoring
+    path: rules/loan/risk_scoring.yaml
+    domain: loan
+    owner: credit-risk@stablebank.demo
+
+  - rule_id: loan_servicing
+    rule_type: loan_servicing
+    path: rules/loan/loan_servicing.yaml
+    domain: loan
+    owner: collections@stablebank.demo
+
+  - rule_id: fx_policy
+    rule_type: fx_policy
+    path: rules/ledger/fx_policy.yaml
+    domain: ledger
+    owner: treasury@stablebank.demo
+
+  - rule_id: depeg_policy
+    rule_type: depeg_policy
+    path: rules/ledger/depeg_policy.yaml
+    domain: ledger
+    owner: treasury@stablebank.demo
+
+  - rule_id: spend_waterfall
+    rule_type: spend_waterfall
+    path: rules/account/spend_waterfall.yaml
+    domain: account
+    owner: payments@stablebank.demo
+
+  - rule_id: dashboard_thresholds
+    rule_type: dashboard_thresholds
+    path: rules/dashboard/dashboard_thresholds.yaml
+    domain: dashboard
+    owner: finance@stablebank.demo
+
+  - rule_id: risk_weights
+    rule_type: risk_weights
+    path: rules/dashboard/risk_weights.yaml
+    domain: dashboard
+    owner: finance@stablebank.demo
+
+  - rule_id: liquidity_stress
+    rule_type: liquidity_stress
+    path: rules/dashboard/liquidity_stress.yaml
+    domain: dashboard
+    owner: treasury@stablebank.demo

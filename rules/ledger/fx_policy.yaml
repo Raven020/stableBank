@@ -1,0 +1,46 @@
+rule_id: fx_policy
+rule_type: fx_policy
+version: 1
+domain: ledger
+description: >
+  Mock USD/USDC exchange rate and rounding policy used by the ledger's FX
+  conversion and quoting endpoints.
+rationale: >
+  Treasury needs to move the mock peg rate (and, later, point it at a real
+  price feed) without a deploy, while every conversion remains fully
+  reproducible from the rate that was live at the time.
+owner: treasury@stablebank.demo
+last_reviewed: "2026-08-01"
+
+supported_currencies: [USD, USDC]
+
+# mock_rate is USD per 1 unit of `base`, as an 8-decimal-place string.
+pairs:
+  - { base: USDC, quote: USD, mock_rate: "0.99850000", source: mock }
+
+rounding: half_up   # half_up | down
+
+treasury_fx_accounts: { USD: treasury-fx-usd, USDC: treasury-fx-usdc }
+
+examples:
+  # USD -> USDC (inverse direction: usdc_amount = usd_amount / mock_rate)
+  # 100.00 USD / 0.99850000 = 100.150225338... USDC
+  # -> minor units (1e-6 USDC): 100150225.338... -> half_up -> 100150225
+  - name: convert 100 USD to USDC
+    input: { from: USD, to: USDC, amount_minor: 10000 }
+    expected:
+      to_amount_minor: 100150225
+      rate_scaled: 99850000
+      rate_display: "0.99850000"
+      source: mock
+
+  # USDC -> USD (direct direction: usd_amount = usdc_amount * mock_rate)
+  # 50.000000 USDC * 0.99850000 = 49.925 USD exactly
+  # -> minor units (cents): 4992.5 -> half_up (exact .5) -> 4993
+  - name: convert 50 USDC to USD, exact half-cent rounds up
+    input: { from: USDC, to: USD, amount_minor: 50000000 }
+    expected:
+      to_amount_minor: 4993
+      rate_scaled: 99850000
+      rate_display: "0.99850000"
+      source: mock

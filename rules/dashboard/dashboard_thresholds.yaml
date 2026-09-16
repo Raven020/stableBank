@@ -1,0 +1,31 @@
+rule_id: dashboard_thresholds
+rule_type: dashboard_thresholds
+version: 1
+domain: dashboard
+description: >
+  Illustrative regulatory-style target ratios (LCR, NSFR, capital
+  adequacy, loan-to-deposit) shown on the dashboard, and the thresholds
+  used to flag a breach.
+rationale: >
+  Finance wants to demonstrate what changing a target ratio does to the
+  dashboard's status flags without a deploy; these are illustrative
+  targets for a proof-of-concept, not certified regulatory minimums.
+owner: finance@stablebank.demo
+last_reviewed: "2026-08-01"
+
+targets:
+  lcr_minimum_pct: 100
+  nsfr_minimum_pct: 100
+  capital_adequacy_minimum_pct: 10.5
+  loan_to_deposit_maximum_pct: 90
+
+# lcr/nsfr/capital_adequacy: "ok" if pct >= *_minimum_pct else "below_target"
+# loan_to_deposit: "ok" if pct <= loan_to_deposit_maximum_pct else "above_maximum"
+examples:
+  - name: all ratios within target
+    input: { lcr_pct: 120, nsfr_pct: 110, capital_adequacy_pct: 12.0, loan_to_deposit_pct: 70 }
+    expected: { lcr: ok, nsfr: ok, capital_adequacy: ok, loan_to_deposit: ok }
+
+  - name: all ratios breach their target
+    input: { lcr_pct: 90, nsfr_pct: 95, capital_adequacy_pct: 9.0, loan_to_deposit_pct: 95 }
+    expected: { lcr: below_target, nsfr: below_target, capital_adequacy: below_target, loan_to_deposit: above_maximum }
