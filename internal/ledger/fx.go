@@ -21,10 +21,11 @@ type RateProvider interface {
 
 // Rate is one FX rate quote.
 type Rate struct {
-	From, To string
-	Scaled   int64 // to-per-from × 1e8
-	Source   string
-	AsOf     time.Time
+	From   string    `json:"from"`
+	To     string    `json:"to"`
+	Scaled int64     `json:"scaled"` // to-per-from × 1e8
+	Source string    `json:"source"`
+	AsOf   time.Time `json:"as_of"`
 }
 
 // roundingModeProvider is an optional capability a RateProvider may
@@ -38,26 +39,28 @@ type roundingModeProvider interface {
 
 // FXRequest is a request to convert money between two ledger accounts.
 type FXRequest struct {
-	FromAccountID, ToAccountID string
-	From                       Amount
-	Kind, Description          string
-	Metadata                   map[string]string
+	FromAccountID string            `json:"from_account_id"`
+	ToAccountID   string            `json:"to_account_id"`
+	From          Amount            `json:"from"`
+	Kind          string            `json:"kind"`
+	Description   string            `json:"description"`
+	Metadata      map[string]string `json:"metadata,omitempty"`
 }
 
 // FXQuote is a pure (no ledger writes) conversion quote.
 type FXQuote struct {
-	From         Amount
-	To           Amount
-	Rate         Rate
-	RoundingMode string
+	From         Amount `json:"from"`
+	To           Amount `json:"to"`
+	Rate         Rate   `json:"rate"`
+	RoundingMode string `json:"rounding_mode"`
 }
 
 // FXResult is the outcome of Convert: the quote plus both linked, finalized
 // transactions.
 type FXResult struct {
-	Quote  FXQuote
-	FromTx Transaction
-	ToTx   Transaction
+	Quote  FXQuote     `json:"quote"`
+	FromTx Transaction `json:"from_tx"`
+	ToTx   Transaction `json:"to_tx"`
 }
 
 // RuleReader is the minimal interface the ledger needs from the rules
