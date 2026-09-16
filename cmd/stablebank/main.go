@@ -13,8 +13,11 @@ import (
 	"os"
 	"time"
 
+	"github.com/Raven020/stableBank/internal/account"
+	"github.com/Raven020/stableBank/internal/dashboard"
 	"github.com/Raven020/stableBank/internal/httpx"
 	"github.com/Raven020/stableBank/internal/ledger"
+	"github.com/Raven020/stableBank/internal/loan"
 	"github.com/Raven020/stableBank/internal/rules"
 	"github.com/Raven020/stableBank/internal/simclock"
 	"github.com/Raven020/stableBank/internal/store"
@@ -61,6 +64,13 @@ func main() {
 	engine := rules.NewEngine(st, clock, rulesDir)
 	engine.RegisterEvaluator("fx_policy", ledger.EvaluateFXPolicy)
 	engine.RegisterEvaluator("depeg_policy", ledger.EvaluateDepegPolicy)
+	engine.RegisterEvaluator("spend_waterfall", account.EvaluateWaterfall)
+	engine.RegisterEvaluator("risk_scoring", loan.EvaluateRiskScore)
+	engine.RegisterEvaluator("loan_underwriting", loan.EvaluateUnderwriting)
+	engine.RegisterEvaluator("loan_servicing", loan.EvaluateServicing)
+	engine.RegisterEvaluator("dashboard_thresholds", dashboard.EvaluateThresholds)
+	engine.RegisterEvaluator("risk_weights", dashboard.EvaluateRiskWeights)
+	engine.RegisterEvaluator("liquidity_stress", dashboard.EvaluateLiquidityStress)
 	if err := engine.LoadFromDisk(ctx); err != nil {
 		log.Fatalf("rules: %v", err)
 	}
@@ -76,12 +86,27 @@ func main() {
 		log.Fatalf("ledger seed: %v", err)
 	}
 
+	// Domain services. Seeding is idempotent so restarts against Postgres
+	// do not duplicate the demo state.
+	accounts := account.New(book, engine, clock)
+	if err := accounts.Seed(ctx); err != nil {
+		log.Fatalf("account seed: %v", err)
+	}
+	loans := loan.New(book, engine, st, clock)
+	if err := loans.Seed(ctx); err != nil {
+		log.Fatalf("loan seed: %v", err)
+	}
+	dash := dashboard.New(book, engine, loans, clock)
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, 200, map[string]any{"status": "ok", "sim_now": clock.Now()})
 	})
 	engine.RegisterRoutes(mux)
 	book.RegisterRoutes(mux)
+	accounts.RegisterRoutes(mux)
+	loans.RegisterRoutes(mux)
+	dash.RegisterRoutes(mux)
 
 	log.Printf("stablebank listening on %s (sim clock %s)", addr, clock.Now().Format(time.RFC3339))
 	log.Fatal(http.ListenAndServe(addr, mux))
