@@ -20,10 +20,12 @@ import (
 	"github.com/Raven020/stableBank/internal/loan"
 	"github.com/Raven020/stableBank/internal/rules"
 	"github.com/Raven020/stableBank/internal/simclock"
+	"github.com/Raven020/stableBank/internal/simulate"
 	"github.com/Raven020/stableBank/internal/store"
 	"github.com/Raven020/stableBank/internal/store/memstore"
 	"github.com/Raven020/stableBank/internal/store/pgstore"
 	"github.com/Raven020/stableBank/migrations"
+	"github.com/Raven020/stableBank/web"
 )
 
 // ruleReader adapts rules.Engine to ledger.RuleReader.
@@ -97,6 +99,7 @@ func main() {
 		log.Fatalf("loan seed: %v", err)
 	}
 	dash := dashboard.New(book, engine, loans, clock)
+	sim := simulate.New(clock, loans, accounts, book) // PoC-only: /simulate/*
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -107,6 +110,8 @@ func main() {
 	accounts.RegisterRoutes(mux)
 	loans.RegisterRoutes(mux)
 	dash.RegisterRoutes(mux)
+	sim.RegisterRoutes(mux)
+	mux.Handle("/", web.Handler())
 
 	log.Printf("stablebank listening on %s (sim clock %s)", addr, clock.Now().Format(time.RFC3339))
 	log.Fatal(http.ListenAndServe(addr, mux))
